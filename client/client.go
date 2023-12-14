@@ -54,7 +54,7 @@ func MeasureJitter(address string, numPackets int, packetTimeout time.Duration, 
 		}
 
 		if prevLatency != 0 {
-			jitter := latency - prevLatency
+			jitter := (latency - prevLatency).Abs()
 			totalJitter += jitter
 		}
 
