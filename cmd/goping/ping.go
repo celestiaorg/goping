@@ -104,7 +104,7 @@ var pingCmd = &cobra.Command{
 				return err
 			}
 
-			logger.Info("Jitter", zap.Float64("jitter", jitter))
+			logger.Info("Jitter", zap.Duration("jitter", jitter))
 
 			if flagsPing.quiet {
 				fmt.Print(jitter)

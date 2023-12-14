@@ -42,12 +42,12 @@ func MeasureLatency(address string, numPackets int, packetTimeout time.Duration,
 	return averageLatency, nil
 }
 
-func MeasureJitter(address string, numPackets int, packetTimeout time.Duration, logger *zap.Logger) (float64, error) {
+func MeasureJitter(address string, numPackets int, packetTimeout time.Duration, logger *zap.Logger) (time.Duration, error) {
 	var totalJitter time.Duration
 	prevLatency := time.Duration(0)
 
 	for i := 0; i < numPackets; i++ {
-		latency, err := MeasureLatency(address, numPackets, packetTimeout, logger)
+		latency, err := MeasureLatency(address, 1, packetTimeout, logger)
 		if err != nil {
 			logger.Error("Error measuring latency:", zap.Error(err))
 			continue
@@ -61,7 +61,7 @@ func MeasureJitter(address string, numPackets int, packetTimeout time.Duration, 
 		prevLatency = latency
 	}
 
-	averageJitter := float64(totalJitter) / float64(numPackets-1)
+	averageJitter := totalJitter / time.Duration(numPackets-1)
 	return averageJitter, nil
 }
 
