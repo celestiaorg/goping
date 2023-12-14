@@ -16,7 +16,14 @@ const (
 
 	flagPacketsCount  = "packets-count"
 	flagPacketTimeout = "packet-timeout"
+	flagMode          = "mode"
 	flagQuiet         = "quiet"
+)
+
+const (
+	pingModePacketloss = "packetloss"
+	pingModeLatency    = "latency"
+	pingModeJitter     = "jitter"
 )
 
 var flagsPing struct {
@@ -25,6 +32,7 @@ var flagsPing struct {
 
 	packetsCount  int
 	packetTimeout time.Duration
+	mode          string
 	quiet         bool
 }
 
@@ -34,8 +42,9 @@ func init() {
 	pingCmd.PersistentFlags().IntVarP(&flagsPing.packetsCount, flagPacketsCount, "c", 4, "number of packets to send")
 	pingCmd.PersistentFlags().DurationVarP(&flagsPing.packetTimeout, flagPacketTimeout, "t", 10*time.Millisecond, "timeout for each packet")
 	pingCmd.PersistentFlags().BoolVarP(&flagsPing.quiet, flagQuiet, "q", false, "quiet mode (e.g. only print the summary)")
+	pingCmd.PersistentFlags().StringVarP(&flagsPing.mode, flagMode, "m", pingModePacketloss, "mode (e.g. packetloss, latency, jitter)")
 
-	pingCmd.PersistentFlags().StringVar(&flagsPing.logLevel, flagLogLevel, "info", "log level (e.g. debug, info, warn, error, dpanic, panic, fatal)")
+	pingCmd.PersistentFlags().StringVar(&flagsPing.logLevel, flagLogLevel, zap.InfoLevel.String(), "log level (e.g. debug, info, warn, error, dpanic, panic, fatal)")
 	pingCmd.PersistentFlags().BoolVar(&flagsPing.productionMode, flagProductionMode, false, "production mode (e.g. disable debug logs)")
 }
 
@@ -60,16 +69,48 @@ var pingCmd = &cobra.Command{
 		serverAddr := args[0]
 		logger.Info("pinging server", zap.String("address", serverAddr))
 
-		packetLossPercentage, err := client.MeasurePacketloss(serverAddr, flagsPing.packetsCount, flagsPing.packetTimeout, logger)
-		if err != nil {
-			return err
+		if flagsPing.mode == pingModePacketloss {
+
+			packetLossPercentage, err := client.MeasurePacketloss(serverAddr, flagsPing.packetsCount, flagsPing.packetTimeout, logger)
+			if err != nil {
+				return err
+			}
+
+			logger.Info("Packet loss percentage", zap.Float64("percentage", packetLossPercentage))
+
+			if flagsPing.quiet {
+				fmt.Print(packetLossPercentage)
+			}
+			return nil
 		}
 
-		logger.Info("Packet loss percentage", zap.Float64("percentage", packetLossPercentage))
+		if flagsPing.mode == pingModeLatency {
+			latency, err := client.MeasureLatency(serverAddr, flagsPing.packetsCount, flagsPing.packetTimeout, logger)
+			if err != nil {
+				return err
+			}
 
-		if flagsPing.quiet {
-			fmt.Print(packetLossPercentage)
+			logger.Info("Latency", zap.Duration("latency", latency))
+
+			if flagsPing.quiet {
+				fmt.Print(latency.String())
+			}
+			return nil
 		}
+
+		if flagsPing.mode == pingModeJitter {
+			jitter, err := client.MeasureJitter(serverAddr, flagsPing.packetsCount, flagsPing.packetTimeout, logger)
+			if err != nil {
+				return err
+			}
+
+			logger.Info("Jitter", zap.Float64("jitter", jitter))
+
+			if flagsPing.quiet {
+				fmt.Print(jitter)
+			}
+		}
+
 		return nil
 	},
 }
